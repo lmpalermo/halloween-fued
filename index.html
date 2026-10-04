@@ -10,9 +10,25 @@
 .tv-mode h1{font-size:3rem;margin:.3em 0}.tv-mode #question{font-size:2.1rem}
 .tv-mode .answer{min-height:72px;font-size:1.6rem}.tv-mode .score{font-size:3.2rem}
 .tv-mode .team input{pointer-events:none}
+#modeChooser{position:fixed;inset:0;z-index:9999;background:#140d20;display:none;align-items:center;justify-content:center;padding:24px}
+#modeChooser .chooser-card{width:min(680px,100%);background:#251737;border:2px solid #64477c;border-radius:22px;padding:28px;text-align:center}
+#modeChooser h1{margin-top:0}
+.mode-button{display:block;text-decoration:none;margin:18px 0;padding:24px;border-radius:16px;background:#ff9a3c;color:#241329;font-size:1.5rem;font-weight:800}
+.mode-button.tv{background:#fff5e9}
+body.choose-mode #modeChooser{display:flex}
+body.choose-mode main{display:none}
 </style>
 </head>
-<body><main>
+<body>
+<div id="modeChooser">
+  <div class="chooser-card">
+    <h1>🎃 Halloween Feud</h1>
+    <p>Choose how this device will be used.</p>
+    <a class="mode-button" href="?mode=host">🎮 HOST CONTROLLER</a>
+    <a class="mode-button tv" href="?mode=tv">📺 TV DISPLAY</a>
+  </div>
+</div>
+<main>
 <h1>🎃 Halloween Feud</h1>
 <div class="scores">
 <div class="team" id="team0"><input id="name0" value="Team Ghosts" aria-label="Team one name"><div class="score" id="score0">0</div></div>
@@ -42,8 +58,8 @@ const db = firebase.database();
 
 let mode = new URLSearchParams(location.search).get("mode");
 if (!["host","tv"].includes(mode)) {
-  mode = confirm("Press OK for HOST CONTROLLER.\nPress Cancel for TV DISPLAY.") ? "host" : "tv";
-  history.replaceState(null, "", location.pathname + "?mode=" + mode);
+  mode = null;
+  document.body.classList.add("choose-mode");
 }
 const ROOM = "party";
 const gameRef = db.ref("games/" + ROOM);
@@ -556,7 +572,7 @@ if(mode==="host"){
       render(); applyingRemote=false;
     }
   });
-} else {
+} else if(mode==="tv") {
   gameRef.on("value", s=>{
     if(!s.exists()) return;
     const v=s.val(); applyingRemote=true;
