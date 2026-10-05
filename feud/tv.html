@@ -49,22 +49,21 @@ h1{text-align:center;color:#ff9a3c;font-size:3.2rem;margin:.15em 0 .35em}
 </main>
 <div id="connection">Connecting…</div>
 
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyAmFE08f79oyGbenEQHHB0pRGFBO4Y-xkQ",
-  authDomain: "halloween-fued.firebaseapp.com",
-  databaseURL: "https://halloween-fued-default-rtdb.firebaseio.com",
-  projectId: "halloween-fued",
-  storageBucket: "halloween-fued.firebasestorage.app",
-  messagingSenderId: "115514988678",
-  appId: "1:115514988678:web:ed6f21b8980d34363f9907"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const gameRef = db.ref("games/party");
-const timerRef = db.ref("games/party/timer");
+const DB_ROOT = "https://halloween-fued-default-rtdb.firebaseio.com";
+function snapOf(v){return {exists:function(){return v!==null&&v!==undefined;},val:function(){return v;}};}
+function dbRequest(path, method, body){
+  return fetch(DB_ROOT+"/"+path+".json",{method:method,headers:{"Content-Type":"application/json"},body:body===undefined?undefined:JSON.stringify(body),cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Database HTTP "+r.status);return r.json();});
+}
+function makeRef(path){return {
+  once:function(){return dbRequest(path,"GET").then(function(v){return snapOf(v);});},
+  set:function(v){return dbRequest(path,"PUT",v);},
+  update:function(v){return dbRequest(path,"PATCH",v);},
+  on:function(event,ok,fail){var last="__first__";function poll(){dbRequest(path,"GET").then(function(v){var s=JSON.stringify(v);if(s!==last){last=s;ok(snapOf(v));}}).catch(function(e){if(fail)fail(e);});}poll();return setInterval(poll,600);}
+};}
+
+const gameRef=makeRef("games/party");
+const timerRef=makeRef("games/party/timer");
 const QUESTIONS = [
   {
     "question": "Name something that gets scarier the older you get.",

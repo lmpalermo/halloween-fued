@@ -42,30 +42,25 @@ body.choose-mode main{display:none}
 <p class="hint">Click a numbered answer when a player guesses it. Change team names by clicking them.</p>
 <details id="hostKey"><summary>Host answer key — opening this exposes the answers</summary><ol id="key"></ol></details>
 </main>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyAmFE08f79oyGbenEQHHB0pRGFBO4Y-xkQ",
-  authDomain: "halloween-fued.firebaseapp.com",
-  databaseURL: "https://halloween-fued-default-rtdb.firebaseio.com",
-  projectId: "halloween-fued",
-  storageBucket: "halloween-fued.firebasestorage.app",
-  messagingSenderId: "115514988678",
-  appId: "1:115514988678:web:ed6f21b8980d34363f9907"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const DB_ROOT = "https://halloween-fued-default-rtdb.firebaseio.com";
+function snapOf(v){return {exists:function(){return v!==null&&v!==undefined;},val:function(){return v;}};}
+function dbRequest(path, method, body){
+  return fetch(DB_ROOT+"/"+path+".json",{method:method,headers:{"Content-Type":"application/json"},body:body===undefined?undefined:JSON.stringify(body),cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Database HTTP "+r.status);return r.json();});
+}
+function makeRef(path){return {
+  once:function(){return dbRequest(path,"GET").then(function(v){return snapOf(v);});},
+  set:function(v){return dbRequest(path,"PUT",v);},
+  update:function(v){return dbRequest(path,"PATCH",v);},
+  on:function(event,ok,fail){var last="__first__";function poll(){dbRequest(path,"GET").then(function(v){var s=JSON.stringify(v);if(s!==last){last=s;ok(snapOf(v));}}).catch(function(e){if(fail)fail(e);});}poll();return setInterval(poll,600);}
+};}
 
 let mode = new URLSearchParams(location.search).get("mode");
-if (!["host","tv"].includes(mode)) {
-  mode = null;
-  document.body.classList.add("choose-mode");
-}
-const ROOM = "party";
-const gameRef = db.ref("games/" + ROOM);
-const timerRef = db.ref("games/" + ROOM + "/timer");
-let applyingRemote = false;
+if (!["host","tv"].includes(mode)) { mode=null; document.body.classList.add("choose-mode"); }
+const ROOM="party";
+const gameRef=makeRef("games/"+ROOM);
+const timerRef=makeRef("games/"+ROOM+"/timer");
+let applyingRemote=false;
 // Edit your questions here. These are fictional scores, not real survey results.
 const QUESTIONS = [
   {
@@ -168,9 +163,9 @@ function settle(winner){state.scores[winner]+=state.bank;state.winner=winner;sta
 function setSync(text,bad=false){if($("syncStatus")){ $("syncStatus").textContent=text; $("syncStatus").style.color=bad?"#ff6464":"#83d4b7"; }}
 function publish(){
   if(mode!=="host" || applyingRemote) return Promise.resolve();
-  const payload={state:JSON.parse(JSON.stringify(state)),names:[$("name0").value,$("name1").value],updatedAt:firebase.database.ServerValue.TIMESTAMP};
-  setSync("Firebase: saving…");
-  publishChain=publishChain.then(()=>gameRef.update(payload)).then(()=>setSync("Firebase: synced ✓")).catch(err=>{setSync("Firebase: sync error",true);console.error(err);});
+  const payload={state:JSON.parse(JSON.stringify(state)),names:[$("name0").value,$("name1").value],updatedAt:Date.now()};
+  setSync("Game sync: saving…");
+  publishChain=publishChain.then(()=>gameRef.update(payload)).then(()=>setSync("Game sync: connected ✓")).catch(err=>{setSync("Game sync: error",true);console.error(err);});
   return publishChain;
 }
 function commit(){render();publish();}
@@ -215,7 +210,7 @@ function stopTimerLocal(message){
 function sendTimer(status){
   const now=Date.now();
   const data={status:status,commandId:now,startedAt:now,endsAt:status==='running'?now+15000:0};
-  return timerRef.set(data).catch(err=>{setSync('Firebase: timer sync error',true);console.error(err);});
+  return timerRef.set(data).catch(err=>{setSync('Timer sync: error',true);console.error(err);});
 }
 function startTimer(){
   if(timerHandle){stopTimerLocal('Timer stopped');sendTimer('stopped');return;}
@@ -236,8 +231,8 @@ render=function(){originalRender();document.body.classList.toggle('tv-mode',mode
 
 render();
 if(mode==='host'){
-  setSync('Firebase: loading…');
-  gameRef.once('value').then(s=>{applyingRemote=true;if(s.exists()){const v=s.val();if(v.state)state=v.state;if(v.names){$('name0').value=v.names[0]||'Team Ghosts';$('name1').value=v.names[1]||'Team Pumpkins';}}applyingRemote=false;render();setSync('Firebase: connected ✓');if(!s.exists())publish();}).catch(err=>{setSync('Firebase: connection error',true);console.error(err);});
+  setSync('Game sync: loading…');
+  gameRef.once('value').then(s=>{applyingRemote=true;if(s.exists()){const v=s.val();if(v.state)state=v.state;if(v.names){$('name0').value=v.names[0]||'Team Ghosts';$('name1').value=v.names[1]||'Team Pumpkins';}}applyingRemote=false;render();setSync('Game sync: connected ✓');if(!s.exists())publish();}).catch(err=>{setSync('Game sync: connection error',true);console.error(err);});
 }else if(mode==='tv'){
   gameRef.on('value',s=>{if(!s.exists())return;const v=s.val();applyingRemote=true;if(v.state)state=v.state;if(v.names){$('name0').value=v.names[0]||'Team Ghosts';$('name1').value=v.names[1]||'Team Pumpkins';}render();applyingRemote=false;});
 }
