@@ -64,6 +64,7 @@ if (!["host","tv"].includes(mode)) {
 }
 const ROOM = "party";
 const gameRef = db.ref("games/" + ROOM);
+const timerRef = db.ref("games/" + ROOM + "/timer");
 let applyingRemote = false;
 // Edit your questions here. These are fictional scores, not real survey results.
 const QUESTIONS = [
@@ -505,7 +506,6 @@ const QUESTIONS = [
 ];
 const $=id=>document.getElementById(id);
 let history=[],state=initialState();
-let applyingRemote=false;
 let publishChain=Promise.resolve();
 let timerHandle=null,timerEndsAt=0,audioCtx=null,musicHandle=null;
 function initialState(){return {round:0,scores:[0,0],controller:0,strikes:0,revealed:[],bank:0,phase:"play",winner:null};}
@@ -517,7 +517,7 @@ function publish(){
   if(mode!=="host" || applyingRemote) return Promise.resolve();
   const payload={state:JSON.parse(JSON.stringify(state)),names:[$("name0").value,$("name1").value],updatedAt:firebase.database.ServerValue.TIMESTAMP};
   setSync("Firebase: saving…");
-  publishChain=publishChain.then(()=>gameRef.set(payload)).then(()=>setSync("Firebase: synced ✓")).catch(err=>{setSync("Firebase: sync error",true);console.error(err);});
+  publishChain=publishChain.then(()=>gameRef.update(payload)).then(()=>setSync("Firebase: synced ✓")).catch(err=>{setSync("Firebase: sync error",true);console.error(err);});
   return publishChain;
 }
 function commit(){render();publish();}
@@ -554,12 +554,28 @@ let nameTimer=null;
 function nameChanged(){render();clearTimeout(nameTimer);nameTimer=setTimeout(publish,250);}
 $('name0').oninput=nameChanged;$('name1').oninput=nameChanged;
 
-function ensureAudio(){if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();}
-function tone(freq,start,duration,gain=.035,type='sine'){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(freq,start);g.gain.setValueAtTime(0,start);g.gain.linearRampToValueAtTime(gain,start+.03);g.gain.exponentialRampToValueAtTime(.0001,start+duration);o.connect(g).connect(audioCtx.destination);o.start(start);o.stop(start+duration);}
-function spookyPulse(){if(!audioCtx)return;const t=audioCtx.currentTime;tone(110,t,.7,.025,'sine');tone(164.81,t+.12,.55,.018,'triangle');tone(220,t+.34,.35,.012,'sine');}
-function scream(){ensureAudio();const t=audioCtx.currentTime;const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sawtooth';o.frequency.setValueAtTime(900,t);o.frequency.exponentialRampToValueAtTime(180,t+1.25);g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.16,t+.06);g.gain.exponentialRampToValueAtTime(.0001,t+1.35);o.connect(g).connect(audioCtx.destination);o.start(t);o.stop(t+1.4);}
-function stopTimer(noScream=true){clearInterval(timerHandle);clearInterval(musicHandle);timerHandle=musicHandle=null;timerEndsAt=0;$('timer').textContent='🎵 15-Second Timer';$('timer').classList.remove('timer-stop','timer-running');$('timerStatus').textContent=noScream?'Timer stopped':'';}
-function startTimer(){ensureAudio();if(timerHandle){stopTimer(true);return;}timerEndsAt=Date.now()+15000;$('timer').textContent='⏹ Stop Timer';$('timer').classList.add('timer-stop');spookyPulse();musicHandle=setInterval(spookyPulse,1000);const tick=()=>{const left=Math.max(0,Math.ceil((timerEndsAt-Date.now())/1000));$('timerStatus').textContent=left?`⏱️ ${left} seconds`:'😱 TIME!';if(left<=0){clearInterval(timerHandle);clearInterval(musicHandle);timerHandle=musicHandle=null;$('timer').textContent='🎵 15-Second Timer';$('timer').classList.remove('timer-stop');scream();}};tick();timerHandle=setInterval(tick,200);}
+function stopTimerLocal(message){
+  clearInterval(timerHandle);timerHandle=null;timerEndsAt=0;
+  $('timer').textContent='🎵 15-Second Timer';$('timer').classList.remove('timer-stop','timer-running');
+  $('timerStatus').textContent=message||'';
+}
+function sendTimer(status){
+  const now=Date.now();
+  const data={status:status,commandId:now,startedAt:now,endsAt:status==='running'?now+15000:0};
+  return timerRef.set(data).catch(err=>{setSync('Firebase: timer sync error',true);console.error(err);});
+}
+function startTimer(){
+  if(timerHandle){stopTimerLocal('Timer stopped');sendTimer('stopped');return;}
+  timerEndsAt=Date.now()+15000;
+  $('timer').textContent='⏹ Stop Timer';$('timer').classList.add('timer-stop');
+  sendTimer('running');
+  const tick=()=>{
+    const left=Math.max(0,Math.ceil((timerEndsAt-Date.now())/1000));
+    $('timerStatus').textContent=left?`⏱️ ${left} seconds — sound is playing on TV`:'😱 TIME!';
+    if(left<=0){clearInterval(timerHandle);timerHandle=null;timerEndsAt=0;$('timer').textContent='🎵 15-Second Timer';$('timer').classList.remove('timer-stop');}
+  };
+  tick();timerHandle=setInterval(tick,200);
+}
 $('timer').onclick=startTimer;
 
 const originalRender=render;
