@@ -17,6 +17,8 @@
 .mode-button.tv{background:#fff5e9}
 body.choose-mode #modeChooser{display:flex}
 body.choose-mode main{display:none}
+
+#timerBtn.running{background:#83d4b7;color:#140d20}#timerDisplay{font-weight:800;min-width:70px;text-align:center;align-self:center;font-size:1.25rem}
 </style>
 </head>
 <body>
@@ -36,7 +38,7 @@ body.choose-mode main{display:none}
 </div>
 <p id="round"></p><h2 id="question"></h2><p id="bank"></p><div id="strikes" aria-label="Strikes"></div><p id="status" aria-live="polite"></p><div id="board"></div>
 <div class="controls">
-<button id="switch">Switch controlling team</button><button id="strike" class="danger">❌ Strike</button><button id="award">Award round</button><button id="failed">Steal failed</button><button id="next">Next round →</button><button id="undo">Undo</button><button id="fullscreen">Fullscreen</button><button id="reset">New game</button>
+<button id="switch">Switch controlling team</button><button id="strike" class="danger">❌ Strike</button><button id="award">Award round</button><button id="failed">Steal failed</button><button id="next">Next round →</button><button id="undo">Undo</button><button id="fullscreen">Fullscreen</button><button id="timerBtn">🎵 15-Second Timer</button><span id="timerDisplay"></span><button id="reset">New game</button>
 </div>
 <p class="hint">Click a numbered answer when a player guesses it. Change team names by clicking them.</p>
 <details id="hostKey"><summary>Host answer key — opening this exposes the answers</summary><ol id="key"></ol></details>
@@ -513,7 +515,7 @@ if(state.phase==="settled"||state.revealed.includes(index))return;
 remember();state.revealed.push(index);state.bank+=QUESTIONS[state.round].answers[index][1];
 if(state.phase==="steal")settle(1-state.controller);
 else if(state.revealed.length===QUESTIONS[state.round].answers.length)settle(state.controller);
-render();
+render();publish();
 }
 function render(){
 const q=QUESTIONS[state.round],playing=state.phase==="play",stealing=state.phase==="steal",settled=state.phase==="settled";
@@ -529,15 +531,56 @@ q.answers.forEach(([answer,points],index)=>{const shown=state.revealed.includes(
 $("key").replaceChildren();q.answers.forEach(([answer,points])=>{const item=document.createElement("li");item.textContent=`${answer} — ${points}`;$("key").append(item);});
 $("switch").disabled=!playing;$("strike").disabled=!playing;$("award").disabled=!playing;$("failed").disabled=!stealing;$("next").disabled=!settled||state.round===QUESTIONS.length-1;$("undo").disabled=history.length===0;
 }
-$("switch").onclick=()=>{remember();state.controller=1-state.controller;render();};
-$("strike").onclick=()=>{remember();state.strikes++;if(state.strikes===3)state.phase="steal";render();};
-$("award").onclick=()=>{remember();settle(state.controller);render();};
-$("failed").onclick=()=>{remember();settle(state.controller);render();};
-$("next").onclick=()=>{remember();state.round++;state.controller=state.round%2;state.strikes=0;state.revealed=[];state.bank=0;state.phase="play";state.winner=null;$("hostKey").open=false;render();};
-$("undo").onclick=()=>{if(history.length){state=JSON.parse(history.pop());render();}};
-$("reset").onclick=()=>{if(!confirm("Start a new game and clear both scores?"))return;remember();state=initialState();$("hostKey").open=false;render();};
+$("switch").onclick=()=>{remember();state.controller=1-state.controller;render();publish();};
+$("strike").onclick=()=>{remember();state.strikes++;if(state.strikes===3)state.phase="steal";render();publish();};
+$("award").onclick=()=>{remember();settle(state.controller);render();publish();};
+$("failed").onclick=()=>{remember();settle(state.controller);render();publish();};
+$("next").onclick=()=>{remember();state.round++;state.controller=state.round%2;state.strikes=0;state.revealed=[];state.bank=0;state.phase="play";state.winner=null;$("hostKey").open=false;render();publish();};
+$("undo").onclick=()=>{if(history.length){state=JSON.parse(history.pop());render();publish();}};
+$("reset").onclick=()=>{if(!confirm("Start a new game and clear both scores?"))return;remember();state=initialState();$("hostKey").open=false;render();publish();};
 $("fullscreen").onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{alert("Fullscreen is unavailable. Use your browser’s fullscreen command.");}};
-$("name0").oninput=render;$("name1").oninput=render;
+$("name0").oninput=()=>{render();publish();};$("name1").oninput=()=>{render();publish();};
+
+let timerInterval=null, timerTimeout=null, audioCtx=null, musicNodes=[];
+function getAudioCtx(){
+  if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==="suspended") audioCtx.resume();
+  return audioCtx;
+}
+function spookyNote(freq,start,duration,volume=.07){
+  const ctx=getAudioCtx(), osc=ctx.createOscillator(), gain=ctx.createGain();
+  osc.type="triangle"; osc.frequency.setValueAtTime(freq,start);
+  gain.gain.setValueAtTime(0.0001,start); gain.gain.exponentialRampToValueAtTime(volume,start+.03);
+  gain.gain.exponentialRampToValueAtTime(0.0001,start+duration);
+  osc.connect(gain); gain.connect(ctx.destination); osc.start(start); osc.stop(start+duration+.05);
+  musicNodes.push(osc);
+}
+function startSpookyMusic(){
+  const ctx=getAudioCtx(), now=ctx.currentTime+.03;
+  const notes=[220,261.63,233.08,196,174.61,207.65,185,164.81];
+  for(let i=0;i<30;i++) spookyNote(notes[i%notes.length],now+i*.5,.42,.055);
+}
+function scream(){
+  const ctx=getAudioCtx(), now=ctx.currentTime, osc=ctx.createOscillator(), gain=ctx.createGain();
+  osc.type="sawtooth"; osc.frequency.setValueAtTime(900,now); osc.frequency.exponentialRampToValueAtTime(240,now+1.25);
+  gain.gain.setValueAtTime(.0001,now); gain.gain.exponentialRampToValueAtTime(.22,now+.04); gain.gain.exponentialRampToValueAtTime(.0001,now+1.3);
+  const wob=ctx.createOscillator(), wobGain=ctx.createGain(); wob.frequency.value=18; wobGain.gain.value=70; wob.connect(wobGain); wobGain.connect(osc.frequency);
+  osc.connect(gain); gain.connect(ctx.destination); wob.start(now); osc.start(now); wob.stop(now+1.3); osc.stop(now+1.3);
+}
+function stopTimer(){
+  clearInterval(timerInterval); clearTimeout(timerTimeout); timerInterval=timerTimeout=null;
+  musicNodes.forEach(n=>{try{n.stop()}catch(e){}}); musicNodes=[];
+  $("timerBtn").textContent="🎵 15-Second Timer"; $("timerBtn").classList.remove("running"); $("timerDisplay").textContent="";
+}
+function startTimer(){
+  if(timerTimeout){ stopTimer(); return; }
+  getAudioCtx(); startSpookyMusic();
+  let left=15; $("timerDisplay").textContent=left+"s"; $("timerBtn").textContent="⏹ Stop Timer"; $("timerBtn").classList.add("running");
+  timerInterval=setInterval(()=>{left--; $("timerDisplay").textContent=Math.max(0,left)+"s";},1000);
+  timerTimeout=setTimeout(()=>{ clearInterval(timerInterval); timerInterval=timerTimeout=null; musicNodes=[]; $("timerDisplay").textContent="0s"; scream(); $("timerBtn").textContent="🎵 15-Second Timer"; $("timerBtn").classList.remove("running"); setTimeout(()=>{$("timerDisplay").textContent="";},1500); },15000);
+}
+$("timerBtn").onclick=startTimer;
+
 async function publish(){
   if(mode!=="host" || applyingRemote) return;
   await gameRef.set({
@@ -559,10 +602,6 @@ render = function(){
 };
 
 if(mode==="host"){
-  // Publish after any host click/input that changes game state.
-  document.addEventListener("click", ()=>setTimeout(publish,0));
-  $("name0").addEventListener("input", ()=>setTimeout(publish,0));
-  $("name1").addEventListener("input", ()=>setTimeout(publish,0));
   gameRef.once("value").then(s=>{
     if(!s.exists()){ state=initialState(); render(); publish(); }
     else {
