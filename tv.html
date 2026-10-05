@@ -26,11 +26,12 @@ h1{text-align:center;color:#ff9a3c;font-size:3.2rem;margin:.15em 0 .35em}
 #board{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
 .answer{display:flex;justify-content:space-between;align-items:center;background:#392451;color:white;min-height:78px;font-size:1.65rem;border:2px solid #64477c;border-radius:12px;padding:14px 18px;font-weight:800}
 .answer.revealed{background:#235246;border-color:#83d4b7}
-#connection{position:fixed;right:10px;bottom:8px;font-size:.8rem;opacity:.45}
+#connection{position:fixed;right:10px;bottom:8px;font-size:.8rem;opacity:.45}#soundSetup{position:fixed;inset:0;z-index:9999;background:rgba(20,13,32,.96);display:flex;align-items:center;justify-content:center;padding:24px}#soundCard{max-width:620px;text-align:center;background:#251737;border:3px solid #ff9a3c;border-radius:22px;padding:32px}#soundCard h2{font-size:2rem;margin-top:0}#enableSound{font-size:1.5rem;padding:18px 28px;border:0;border-radius:14px;background:#ff9a3c;color:#241329;font-weight:900}#tvTimer{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:5000;font-size:9rem;font-weight:900;color:#fff5e9;text-shadow:0 0 30px #ff9a3c;display:none}
 @media(max-width:800px){#board{grid-template-columns:1fr}h1{font-size:2.4rem}#question{font-size:1.8rem}}
 </style>
 </head>
 <body>
+<div id="soundSetup"><div id="soundCard"><h2>🔊 Enable Halloween Sound</h2><p>Press this once with the TV remote. The tablet can then start the 15-second spooky timer through the TV speakers.</p><button id="enableSound">Enable TV Sound</button></div></div><div id="tvTimer"></div>
 <main>
 <h1>🎃 Halloween Feud</h1>
 <div class="scores">
@@ -61,6 +62,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const gameRef = db.ref("games/party");
+const timerRef = db.ref("games/party/timer");
 const QUESTIONS = [
   {
     "question": "Name something you see in a haunted house.",
@@ -547,6 +549,36 @@ function render(){
     row.appendChild(text); row.appendChild(score); board.appendChild(row);
   });
 }
+
+let audioCtx=null,musicInterval=null,timerInterval=null,lastTimerCommand=0;
+function ensureAudio(){
+  if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended') audioCtx.resume();
+}
+function tone(freq,start,duration,gain,type){
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type||'sine';o.frequency.setValueAtTime(freq,start);g.gain.setValueAtTime(.0001,start);g.gain.exponentialRampToValueAtTime(gain,start+.05);g.gain.exponentialRampToValueAtTime(.0001,start+duration);o.connect(g).connect(audioCtx.destination);o.start(start);o.stop(start+duration);
+}
+function spookyPhrase(){
+  if(!audioCtx)return;const t=audioCtx.currentTime;
+  tone(55,t,1.4,.055,'sine');tone(82.41,t,.8,.035,'triangle');tone(77.78,t+.38,.7,.03,'triangle');tone(69.30,t+.78,.8,.032,'triangle');
+  tone(329.63,t+.12,.22,.018,'sine');tone(311.13,t+.55,.25,.018,'sine');
+}
+function stopMusic(){if(musicInterval){clearInterval(musicInterval);musicInterval=null;}}
+function scream(){
+  if(!audioCtx)return;const t=audioCtx.currentTime,d=1.6,rate=audioCtx.sampleRate,buf=audioCtx.createBuffer(1,rate*d,rate),data=buf.getChannelData(0);
+  for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*(1-i/data.length);
+  const src=audioCtx.createBufferSource(),filter=audioCtx.createBiquadFilter(),g=audioCtx.createGain();src.buffer=buf;filter.type='bandpass';filter.frequency.setValueAtTime(1500,t);filter.frequency.exponentialRampToValueAtTime(500,t+d);g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.32,t+.08);g.gain.exponentialRampToValueAtTime(.0001,t+d);src.connect(filter).connect(g).connect(audioCtx.destination);src.start(t);
+  tone(1000,t,1.3,.12,'sawtooth');
+}
+function stopTvTimer(){stopMusic();if(timerInterval){clearInterval(timerInterval);timerInterval=null;}$('tvTimer').style.display='none';}
+function runTvTimer(endsAt){
+  stopTvTimer();ensureAudio();spookyPhrase();musicInterval=setInterval(spookyPhrase,1500);
+  function tick(){const ms=endsAt-Date.now(),left=Math.max(0,Math.ceil(ms/1000));$('tvTimer').textContent=left;$('tvTimer').style.display='block';if(ms<=0){stopTvTimer();$('tvTimer').textContent='TIME!';$('tvTimer').style.display='block';scream();setTimeout(function(){$('tvTimer').style.display='none';},1800);}}
+  tick();timerInterval=setInterval(tick,100);
+}
+$('enableSound').onclick=function(){ensureAudio();tone(220,audioCtx.currentTime,.12,.025,'sine');$('soundSetup').style.display='none';localStorage.setItem('halloweenFeudSoundEnabled','1');};
+// Browsers still require a real user gesture after a fresh TV/browser session, so show the button each new page load.
+timerRef.on('value',function(snapshot){const t=snapshot.val()||{};if(!t.commandId||t.commandId===lastTimerCommand)return;lastTimerCommand=t.commandId;if(t.status==='running'&&t.endsAt>Date.now()){runTvTimer(t.endsAt);}else if(t.status==='stopped'){stopTvTimer();}});
 
 gameRef.on("value", function(snapshot){
   if(!snapshot.exists()){
