@@ -69,438 +69,91 @@ let applyingRemote = false;
 // Edit your questions here. These are fictional scores, not real survey results.
 const QUESTIONS = [
   {
-    "question": "Name something you see in a haunted house.",
+    "question": "Name something that gets scarier the older you get.",
     "answers": [
-      [
-        "Ghost",
-        30
-      ],
-      [
-        "Skeleton",
-        24
-      ],
-      [
-        "Spider / cobweb",
-        18
-      ],
-      [
-        "Vampire",
-        12
-      ],
-      [
-        "Zombie",
-        10
-      ],
-      [
-        "Coffin",
-        6
-      ]
+      ["Getting older / birthdays", 28],
+      ["Bills / money", 22],
+      ["Doctors / health", 18],
+      ["The mirror", 14],
+      ["Hangovers", 10],
+      ["Teenagers / kids", 8]
     ]
   },
   {
-    "question": "Name a popular Halloween costume.",
+    "question": "Name something you might regret doing at a Halloween party.",
     "answers": [
-      [
-        "Witch",
-        28
-      ],
-      [
-        "Vampire",
-        22
-      ],
-      [
-        "Ghost",
-        18
-      ],
-      [
-        "Zombie",
-        14
-      ],
-      [
-        "Superhero",
-        10
-      ],
-      [
-        "Skeleton",
-        8
-      ]
+      ["Drinking too much", 30],
+      ["Texting an ex", 20],
+      ["Bad dancing", 16],
+      ["Kissing someone", 14],
+      ["Posting pictures", 12],
+      ["Wearing THAT costume", 8]
     ]
   },
   {
-    "question": "Name something people do on Halloween.",
+    "question": "Name something people think they're really good at after a few drinks.",
     "answers": [
-      [
-        "Trick-or-treat",
-        35
-      ],
-      [
-        "Wear a costume",
-        25
-      ],
-      [
-        "Go to a party",
-        16
-      ],
-      [
-        "Watch scary movies",
-        12
-      ],
-      [
-        "Carve pumpkins",
-        8
-      ],
-      [
-        "Visit a haunted house",
-        4
-      ]
+      ["Dancing", 28],
+      ["Singing", 22],
+      ["Flirting", 18],
+      ["Telling stories", 14],
+      ["Giving advice", 10],
+      ["Texting", 8]
     ]
   },
   {
-    "question": "Name a candy you hope to get while trick-or-treating.",
+    "question": "Name something embarrassing that could happen while wearing a Halloween costume.",
     "answers": [
-      [
-        "Peanut butter cups",
-        30
-      ],
-      [
-        "Chocolate bar",
-        24
-      ],
-      [
-        "Skittles",
-        18
-      ],
-      [
-        "M&M’s",
-        12
-      ],
-      [
-        "Sour gummies",
-        10
-      ],
-      [
-        "Lollipop",
-        6
-      ]
+      ["Costume rips", 26],
+      ["Trip / fall", 22],
+      ["Wardrobe malfunction", 18],
+      ["Can't use the bathroom", 14],
+      ["Lose part of the costume", 12],
+      ["Someone wears the same costume", 8]
     ]
   },
   {
-    "question": "Name something you associate with witches.",
+    "question": "Name a costume you'd question if your spouse said, ‘Don't worry, it's totally appropriate.’",
     "answers": [
-      [
-        "Broomstick",
-        32
-      ],
-      [
-        "Pointy hat",
-        24
-      ],
-      [
-        "Cauldron",
-        18
-      ],
-      [
-        "Black cat",
-        12
-      ],
-      [
-        "Spells",
-        8
-      ],
-      [
-        "Wand",
-        6
-      ]
+      ["Sexy nurse", 24],
+      ["Playboy bunny", 20],
+      ["Stripper", 18],
+      ["French maid", 16],
+      ["Tarzan / Jane", 12],
+      ["Anything with body paint", 10]
     ]
   },
   {
-    "question": "Name something a vampire might have.",
+    "question": "Name something you might hear yelled at an adult Halloween party.",
     "answers": [
-      [
-        "Fangs",
-        34
-      ],
-      [
-        "Cape",
-        24
-      ],
-      [
-        "Coffin",
-        18
-      ],
-      [
-        "Blood",
-        12
-      ],
-      [
-        "Pale skin",
-        8
-      ],
-      [
-        "Bat wings",
-        4
-      ]
+      ["Shots!", 28],
+      ["Turn it up!", 20],
+      ["Where's my drink?", 18],
+      ["Take a picture!", 14],
+      ["Who invited them?", 12],
+      ["I need an Uber!", 8]
     ]
   },
   {
-    "question": "Name something you use to decorate for Halloween.",
+    "question": "Besides candy, name something adults hope to get on Halloween night.",
     "answers": [
-      [
-        "Pumpkins",
-        30
-      ],
-      [
-        "Fake cobwebs",
-        24
-      ],
-      [
-        "Skeletons",
-        18
-      ],
-      [
-        "Ghosts",
-        12
-      ],
-      [
-        "Tombstones",
-        10
-      ],
-      [
-        "Orange lights",
-        6
-      ]
+      ["Drinks", 26],
+      ["Get lucky", 22],
+      ["A kiss", 18],
+      ["Attention", 14],
+      ["Food", 12],
+      ["A phone number", 8]
     ]
   },
   {
-    "question": "Name something that makes a spooky noise.",
+    "question": "Name something that could make you say, ‘I'm NEVER drinking that again!’",
     "answers": [
-      [
-        "Ghost",
-        28
-      ],
-      [
-        "Werewolf",
-        24
-      ],
-      [
-        "Creaky door",
-        18
-      ],
-      [
-        "Owl",
-        14
-      ],
-      [
-        "Wind",
-        10
-      ],
-      [
-        "Chains",
-        6
-      ]
-    ]
-  },
-  {
-    "question": "Name a place you would hate to be alone at midnight.",
-    "answers": [
-      [
-        "Cemetery",
-        32
-      ],
-      [
-        "Haunted house",
-        26
-      ],
-      [
-        "Dark forest",
-        18
-      ],
-      [
-        "Abandoned hospital",
-        12
-      ],
-      [
-        "Basement",
-        8
-      ],
-      [
-        "Corn maze",
-        4
-      ]
-    ]
-  },
-  {
-    "question": "Name something people do when they get scared.",
-    "answers": [
-      [
-        "Scream",
-        34
-      ],
-      [
-        "Run away",
-        26
-      ],
-      [
-        "Jump",
-        18
-      ],
-      [
-        "Hide",
-        10
-      ],
-      [
-        "Freeze",
-        8
-      ],
-      [
-        "Close their eyes",
-        4
-      ]
-    ]
-  },
-  {
-    "question": "Name something you might find in a witch’s potion.",
-    "answers": [
-      [
-        "Eye of newt",
-        28
-      ],
-      [
-        "Frog / toad",
-        24
-      ],
-      [
-        "Spider",
-        18
-      ],
-      [
-        "Bat wing",
-        14
-      ],
-      [
-        "Worms",
-        10
-      ],
-      [
-        "Magic herbs",
-        6
-      ]
-    ]
-  },
-  {
-    "question": "Name a Halloween costume you can make with things at home.",
-    "answers": [
-      [
-        "Sheet ghost",
-        34
-      ],
-      [
-        "Mummy",
-        24
-      ],
-      [
-        "Black cat",
-        18
-      ],
-      [
-        "Zombie",
-        12
-      ],
-      [
-        "Scarecrow",
-        8
-      ],
-      [
-        "Witch",
-        4
-      ]
-    ]
-  },
-  {
-    "question": "Name something you do with a pumpkin.",
-    "answers": [
-      [
-        "Carve it",
-        36
-      ],
-      [
-        "Make pie",
-        24
-      ],
-      [
-        "Decorate with it",
-        18
-      ],
-      [
-        "Roast the seeds",
-        10
-      ],
-      [
-        "Paint it",
-        8
-      ],
-      [
-        "Smash it",
-        4
-      ]
-    ]
-  },
-  {
-    "question": "Name something you might see at a Halloween party.",
-    "answers": [
-      [
-        "Costumes",
-        32
-      ],
-      [
-        "Candy",
-        24
-      ],
-      [
-        "Spooky decorations",
-        18
-      ],
-      [
-        "Pumpkins",
-        12
-      ],
-      [
-        "Party games",
-        8
-      ],
-      [
-        "Fog machine",
-        6
-      ]
-    ]
-  },
-  {
-    "question": "Name a reason someone might stop trick-or-treating early.",
-    "answers": [
-      [
-        "Candy bag is full",
-        28
-      ],
-      [
-        "Too tired",
-        24
-      ],
-      [
-        "Rain / bad weather",
-        18
-      ],
-      [
-        "Too scared",
-        14
-      ],
-      [
-        "Bedtime",
-        10
-      ],
-      [
-        "Sore feet",
-        6
-      ]
+      ["Tequila", 28],
+      ["Fireball", 22],
+      ["Mystery punch", 18],
+      ["Shots", 14],
+      ["Too much wine", 10],
+      ["Jell-O shots", 8]
     ]
   }
 ];
